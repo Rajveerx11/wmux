@@ -347,6 +347,10 @@ export function useTerminal({ surfaceId, shell, cwd, visible = true, focused = t
       }
     };
 
+    // Resolve effective shell: explicit (workspace) > user default preference > main-process fallback.
+    // Read prefs at spawn time so changing the default later doesn't re-spawn live PTYs.
+    const effectiveShell = shell || useStore.getState().workspacePrefs.defaultShell || '';
+
     // If surfaceId is given AND a PTY already exists for it (agent spawn or re-mount), attach to it
     if (surfaceId && window.wmux.pty.has) {
       window.wmux.pty.has(surfaceId).then((exists: boolean) => {
@@ -354,7 +358,7 @@ export function useTerminal({ surfaceId, shell, cwd, visible = true, focused = t
           attachToPty(surfaceId!);
         } else {
           // No existing PTY — create a new one, passing surfaceId so PTY ID = Surface ID
-          window.wmux.pty.create({ shell: shell || '', cwd: cwd ?? '', env: {}, surfaceId })
+          window.wmux.pty.create({ shell: effectiveShell, cwd: cwd ?? '', env: {}, surfaceId })
             .then((created: { id: string; shell: string }) => {
               setResolvedShellForSurface(surfaceId, created.shell);
               attachToPty(created.id);
@@ -364,7 +368,7 @@ export function useTerminal({ surfaceId, shell, cwd, visible = true, focused = t
       });
     } else {
       // No surfaceId hint — always create new PTY
-      window.wmux.pty.create({ shell: shell || '', cwd: cwd ?? '', env: {} })
+      window.wmux.pty.create({ shell: effectiveShell, cwd: cwd ?? '', env: {} })
         .then((created: { id: string; shell: string }) => {
           setResolvedShellForSurface(surfaceId, created.shell);
           attachToPty(created.id);
