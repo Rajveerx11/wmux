@@ -1,6 +1,7 @@
 import React from 'react';
 import logoSrc from '../../assets/logo.png';
 import NotificationBell from './NotificationBell';
+import UpdateBadge from './UpdateBadge';
 import { NotificationInfo, WorkspaceId, PaneId, SurfaceId } from '../../../shared/types';
 import '../../styles/titlebar.css';
 
@@ -51,6 +52,7 @@ export default function Titlebar({
           onJump={onNotificationJump}
           onMarkAllRead={onMarkAllNotificationsRead}
         />
+        <UpdateBadge />
         <button
           className="titlebar__btn"
           onClick={onSettingsClick}

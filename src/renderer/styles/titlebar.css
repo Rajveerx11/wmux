@@ -69,3 +69,35 @@
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.15);
 }
+
+.titlebar__update-badge {
+  width: auto;
+  padding: 0 8px;
+  gap: 4px;
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.35);
+  background: rgba(74, 222, 128, 0.08);
+  font-size: 11px;
+  font-weight: 600;
+  animation: wmux-update-pulse 2.4s ease-in-out infinite;
+}
+
+.titlebar__update-badge:hover {
+  color: #86efac;
+  background: rgba(74, 222, 128, 0.16);
+  border-color: rgba(74, 222, 128, 0.55);
+}
+
+.titlebar__update-badge__arrow {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.titlebar__update-badge__version {
+  letter-spacing: 0.02em;
+}
+
+@keyframes wmux-update-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+  50%      { box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.18); }
+}

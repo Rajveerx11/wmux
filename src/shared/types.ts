@@ -284,6 +284,10 @@ export const IPC_CHANNELS = {
   // Orchestration (wmux-orchestrator plugin state broadcast)
   ORCHESTRATION_UPDATE: 'orchestration:update',
   ORCHESTRATION_CLEAR: 'orchestration:clear',
+  // App update notification (GitHub releases polling — opens OS browser on click)
+  UPDATE_AVAILABLE: 'update:available',
+  UPDATE_GET_LATEST: 'update:get-latest',
+  UPDATE_OPEN_RELEASE: 'update:open-release',
 } as const;
 
 // ─── Orchestration state (wmux-orchestrator plugin) ────────────────────────

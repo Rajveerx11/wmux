@@ -82,6 +82,15 @@ contextBridge.exposeInMainWorld('wmux', {
   clipboard: {
     pasteImage: () => ipcRenderer.invoke('clipboard:paste-image'),
   },
+  update: {
+    getLatest: () => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_GET_LATEST),
+    openRelease: (url: string) => ipcRenderer.send(IPC_CHANNELS.UPDATE_OPEN_RELEASE, url),
+    onAvailable: (callback: (info: { version: string; url: string; body?: string; publishedAt?: string }) => void) => {
+      const handler = (_event: any, info: any) => callback(info);
+      ipcRenderer.on(IPC_CHANNELS.UPDATE_AVAILABLE, handler);
+      return () => ipcRenderer.removeListener(IPC_CHANNELS.UPDATE_AVAILABLE, handler);
+    },
+  },
   hook: {
     onEvent: (callback: (event: any) => void) => {
       const handler = (_event: any, data: any) => callback(data);

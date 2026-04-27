@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { registerIpcHandlers, cdpBridge, agentManager, ptyManager, setupAgentPtyForwarding } from './ipc-handlers';
 import { distributeAgents } from './agent-manager';
 import { PipeServer } from './pipe-server';
@@ -10,6 +10,7 @@ import { IPC_CHANNELS } from '../shared/types';
 import { loadSession, saveSession, handleVersionChange, SessionData } from './session-persistence';
 import { WindowManager } from './window-manager';
 import { initAutoUpdater } from './updater';
+import { initUpdateChecker, getLatestUpdate } from './update-checker';
 import { ensureClaudeContext, ensureClaudeHooks, ensureChromeDevtoolsConfig, ensureOrchestratorPlugin } from './claude-context';
 import { startOrchestrationWatcher } from './orchestration-watcher';
 import fs from 'fs';
@@ -193,7 +194,19 @@ app.whenReady().then(() => {
   // Initialize auto-updater only when packaged (avoids errors in dev)
   if (app.isPackaged) {
     initAutoUpdater();
+    initUpdateChecker();
   }
+
+  // Late-mounted windows query the cached latest update info so the badge
+  // appears even if the GitHub poll fired before the window's renderer attached.
+  ipcMain.handle(IPC_CHANNELS.UPDATE_GET_LATEST, () => getLatestUpdate());
+  ipcMain.on(IPC_CHANNELS.UPDATE_OPEN_RELEASE, (_event, url: string) => {
+    // Whitelist GitHub release URLs so a hostile renderer can't pivot this
+    // channel into an arbitrary openExternal sink.
+    if (typeof url === 'string' && /^https:\/\/github\.com\//.test(url)) {
+      void shell.openExternal(url);
+    }
+  });
 
   // Kick off the first auto-save cycle after the window is ready
   scheduleAutoSave();
