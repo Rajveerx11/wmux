@@ -24,8 +24,7 @@ export interface ClaudeActivity {
   activeSkill: string | null;
   lastTool: string | null;
   lastUpdate: number;
-  isDone: boolean;    // true after "Baked for" / "Cost:" — Claude finished responding
-  isDoneAt: number | null; // timestamp when isDone last became true (for TTL expiry)
+  isDone: boolean; // true after "Baked for" / "Cost:" — Claude finished responding
 }
 
 const activities = new Map<SurfaceId, ClaudeActivity>();
@@ -58,7 +57,7 @@ const PATTERNS = {
 function getOrCreate(surfaceId: SurfaceId): ClaudeActivity {
   let activity = activities.get(surfaceId);
   if (!activity) {
-    activity = { agents: [], activeSkill: null, lastTool: null, lastUpdate: Date.now(), isDone: false, isDoneAt: null };
+    activity = { agents: [], activeSkill: null, lastTool: null, lastUpdate: Date.now(), isDone: false };
     activities.set(surfaceId, activity);
   }
   return activity;
@@ -82,7 +81,6 @@ export function observePtyData(surfaceId: SurfaceId, data: string): void {
     // Response done ("✻ Baked for …" / "✻ Cost: …")
     if (PATTERNS.responseDone.test(trimmed)) {
       activity.isDone = true;
-      activity.isDoneAt = Date.now();
       activity.lastTool = null;
       activity.activeSkill = null;
       changed = true;
@@ -94,7 +92,6 @@ export function observePtyData(surfaceId: SurfaceId, data: string): void {
     if (batchMatch) {
       activity.agents = [];
       activity.isDone = false;
-      activity.isDoneAt = null;
       changed = true;
       continue;
     }
@@ -150,7 +147,6 @@ export function observePtyData(surfaceId: SurfaceId, data: string): void {
     if (toolMatch) {
       activity.lastTool = toolMatch[1];
       activity.isDone = false;
-      activity.isDoneAt = null;
       changed = true;
       continue;
     }
@@ -160,18 +156,14 @@ export function observePtyData(surfaceId: SurfaceId, data: string): void {
     if (mcpMatch) {
       activity.lastTool = `${mcpMatch[1]}:${mcpMatch[2]}`;
       activity.isDone = false;
-      activity.isDoneAt = null;
       changed = true;
       continue;
     }
 
     // Tool result line (⎿) — means a tool is actively running, clear done state
-    if (PATTERNS.toolResult.test(trimmed)) {
-      if (activity.isDone) {
-        activity.isDone = false;
-        activity.isDoneAt = null;
-        changed = true;
-      }
+    if (PATTERNS.toolResult.test(trimmed) && activity.isDone) {
+      activity.isDone = false;
+      changed = true;
       continue;
     }
   }

@@ -107,8 +107,6 @@ export default function WorkspaceRow({
 
   // How long a tool label persists after the last hook/observer event (ms)
   const ACTIVITY_TTL = 5000;
-  // How long isDone can keep the status as "Idle" before expiring (failsafe)
-  const IDLE_TTL = 60_000;
 
   // ── Determine if Claude is actively working (recent hook or observer data) ──
   const isClaudeActive = useMemo(() => {
@@ -137,12 +135,13 @@ export default function WorkspaceRow({
   // ── Detect "Claude was active but stopped" (shell still says running) ──
   const claudeIsIdle = useMemo(() => {
     if (workspace.shellState !== 'running') return false;
-    const now = Date.now();
-    // Observer saw "Baked for" / "Cost:" — Claude explicitly finished.
-    // Only trust isDone if it was set recently (IDLE_TTL failsafe prevents permanent stale state).
-    if (wsActivity?.isDone && wsActivity.isDoneAt && now - wsActivity.isDoneAt < IDLE_TTL) return true;
+    // Observer saw "Baked for" / "Cost:" — Claude explicitly finished
+    if (wsActivity?.isDone) return true;
     // Hook activity went stale — Claude stopped using tools
-    if (hookActivity && now - hookActivity.lastSeen >= ACTIVITY_TTL) return true;
+    if (hookActivity) {
+      const now = Date.now();
+      return now - hookActivity.lastSeen >= ACTIVITY_TTL;
+    }
     return false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspace.shellState, wsActivity, hookActivity, tick]);
