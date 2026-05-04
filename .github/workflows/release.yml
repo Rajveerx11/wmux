@@ -118,6 +118,30 @@ jobs:
       #       "https://app.signpath.io/api/v1/${{ secrets.SIGNPATH_ORGANIZATION_ID }}/SigningRequests/${{ steps.sign-submit.outputs.signing_request_id }}/SignedArtifact"
       #     echo "Signed exe downloaded, size: $(wc -c < release/win-unpacked/wmux.exe) bytes"
 
+      # ── Embed icon + metadata into exe (rcedit) ───────────
+      - name: Embed icon and version metadata
+        shell: bash
+        run: |
+          VER=$(node -p "require('./package.json').version")
+          node -e "
+            const { rcedit } = require('rcedit');
+            rcedit('release/win-unpacked/wmux.exe', {
+              icon: 'resources/icons/icon.ico',
+              'version-string': {
+                ProductName: 'wmux',
+                FileDescription: 'wmux',
+                CompanyName: 'wmux',
+                InternalName: 'wmux',
+                OriginalFilename: 'wmux.exe',
+                LegalCopyright: 'Copyright (c) 2025 wmux'
+              },
+              'file-version': process.env.VER,
+              'product-version': process.env.VER
+            }).then(() => console.log('rcedit done')).catch(e => { console.error(e); process.exit(1); });
+          "
+        env:
+          VER: ${{ steps.version.outputs.version }}
+
       # ── Create release zip ─────────────────────────────────
       - name: Create release zip
         shell: pwsh
