@@ -39,7 +39,6 @@
     { "from": "resources/claude-instructions.md", "to": "claude-instructions/claude-instructions.md" },
     { "from": "src/shell-integration", "to": "shell-integration" },
     { "from": "dist/cli/wmux.js", "to": "cli/wmux.js" },
-    { "from": "resources/wmux-orchestrator", "to": "wmux-orchestrator" },
-    { "from": "resources/elevate.exe", "to": "elevate.exe" }
+    { "from": "resources/wmux-orchestrator", "to": "wmux-orchestrator" }
   ]
 }
