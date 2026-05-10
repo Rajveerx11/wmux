@@ -85,7 +85,7 @@
 }
 
 .workspace-row--active {
-  background: #0091FF !important;
+  background: #0091FF;
 }
 
 /* Left rail indicator */
