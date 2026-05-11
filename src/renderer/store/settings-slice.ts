@@ -1,5 +1,36 @@
 import { StateCreator } from 'zustand';
 
+// ─── Persistence helpers (issue #12: defaultShell was lost on restart) ──────
+// Zustand has no persistence middleware here, so workspacePrefs were re-set to
+// defaults on every launch — making the "Default shell" setting feel broken.
+// We persist just this slice to localStorage; failures are swallowed so a
+// locked/sandboxed storage layer can't break the renderer boot.
+
+const WORKSPACE_PREFS_STORAGE_KEY = 'wmux-workspace-prefs';
+
+function loadPersistedWorkspacePrefs(): Partial<WorkspacePrefs> {
+  try {
+    const raw = typeof localStorage !== 'undefined'
+      ? localStorage.getItem(WORKSPACE_PREFS_STORAGE_KEY)
+      : null;
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistWorkspacePrefs(prefs: WorkspacePrefs): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(WORKSPACE_PREFS_STORAGE_KEY, JSON.stringify(prefs));
+    }
+  } catch {
+    // localStorage unavailable (private mode, quota exceeded) — ignore
+  }
+}
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface ShortcutBinding {
@@ -228,7 +259,7 @@ export const createSettingsSlice: StateCreator<SettingsSlice> = (set) => ({
   shortcuts: { ...DEFAULT_SHORTCUTS },
   sidebarVisible: true,
   sidebarPrefs: { ...DEFAULT_SIDEBAR_PREFS },
-  workspacePrefs: { ...DEFAULT_WORKSPACE_PREFS },
+  workspacePrefs: { ...DEFAULT_WORKSPACE_PREFS, ...loadPersistedWorkspacePrefs() },
   terminalPrefs: { ...DEFAULT_TERMINAL_PREFS },
   notificationPrefs: { ...DEFAULT_NOTIFICATION_PREFS },
   browserPrefs: { ...DEFAULT_BROWSER_PREFS },
@@ -252,7 +283,11 @@ export const createSettingsSlice: StateCreator<SettingsSlice> = (set) => ({
   },
 
   setWorkspacePrefs(prefs: Partial<WorkspacePrefs>): void {
-    set((state) => ({ workspacePrefs: { ...state.workspacePrefs, ...prefs } }));
+    set((state) => {
+      const merged = { ...state.workspacePrefs, ...prefs };
+      persistWorkspacePrefs(merged);
+      return { workspacePrefs: merged };
+    });
   },
 
   setTerminalPrefs(prefs: Partial<TerminalPrefs>): void {

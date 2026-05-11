@@ -84,6 +84,9 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
+/* No !important: WorkspaceRow sets inline backgroundColor to workspace.customColor
+   when set, otherwise to #0091FF. Inline styles already beat class rules — leaving
+   !important here blocked user-picked colors (issue #10). */
 .workspace-row--active {
   background: #0091FF;
 }
