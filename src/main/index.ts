@@ -7,6 +7,7 @@ import { GitPoller } from './git-poller';
 import { PrPoller } from './pr-poller';
 import { CDPProxy } from './cdp-proxy';
 import { IPC_CHANNELS } from '../shared/types';
+import { getPipePath } from '../shared/instance';
 import { loadSession, saveSession, handleVersionChange, SessionData } from './session-persistence';
 import { WindowManager } from './window-manager';
 import { initAutoUpdater } from './updater';
@@ -40,7 +41,7 @@ async function ensureBrowserPanel(): Promise<boolean> {
 }
 
 const windowManager = new WindowManager();
-const pipeServer = new PipeServer();
+const pipeServer = new PipeServer(getPipePath());
 const portScanner = new PortScanner();
 const gitPoller = new GitPoller();
 const prPoller = new PrPoller();

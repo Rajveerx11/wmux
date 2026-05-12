@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
+import { getAppDataDir } from '../shared/instance';
 
-const APPDATA_DIR = path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), 'wmux');
+const APPDATA_DIR = getAppDataDir();
 const SESSIONS_DIR = path.join(APPDATA_DIR, 'sessions');
 const SESSION_FILE = path.join(SESSIONS_DIR, 'session.json');
 const VERSION_FILE = path.join(APPDATA_DIR, 'app-version.txt');

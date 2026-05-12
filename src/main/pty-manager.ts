@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import { execFileSync } from 'child_process';
 import { v4 as uuidv4 } from 'uuid';
 import { SurfaceId } from '../shared/types';
+import { getPipePath } from '../shared/instance';
 
 // ─── Shell resolution ──────────────────────────────────────────────────────
 // Validates that a shell executable exists before spawning.
@@ -133,7 +134,7 @@ export class PtyManager {
       ...options.env,
       WMUX: '1',
       WMUX_SURFACE_ID: id,
-      WMUX_PIPE: '\\\\.\\pipe\\wmux',
+      WMUX_PIPE: getPipePath(),
       WMUX_CLI: cliPath,
     };
 

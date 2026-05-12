@@ -2,7 +2,9 @@
 
 import net from 'net';
 
-const PIPE_PATH = '\\\\.\\pipe\\wmux';
+// Respect WMUX_PIPE when set (e.g. by a parent wmux running with WMUX_INSTANCE),
+// so the CLI talks to the same instance that spawned the shell.
+const PIPE_PATH = process.env.WMUX_PIPE || '\\\\.\\pipe\\wmux';
 
 function sendV1(command: string): Promise<string> {
   return new Promise((resolve, reject) => {

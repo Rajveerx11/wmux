@@ -7,7 +7,7 @@
 import net from 'net';
 
 const tool = process.argv[2] || 'unknown';
-const pipePath = '\\\\.\\pipe\\wmux';
+const pipePath = process.env.WMUX_PIPE || '\\\\.\\pipe\\wmux';
 
 const client = net.connect({ path: pipePath }, () => {
   const msg = JSON.stringify({ method: 'hook.event', params: { tool }, id: 1 });
