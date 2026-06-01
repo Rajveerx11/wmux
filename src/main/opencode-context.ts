@@ -29,7 +29,7 @@ function getInstructionsPath(): string {
     if (app.isPackaged) {
       return path.join(process.resourcesPath, 'claude-instructions', 'claude-instructions.md');
     }
-  } catch {}
+  } catch { /* not running under Electron */ }
   return path.join(__dirname, '../../resources/claude-instructions.md');
 }
 
@@ -77,7 +77,7 @@ function getPluginSrcPath(): string {
     if (app.isPackaged) {
       return path.join(process.resourcesPath, 'opencode-plugin', 'wmux.js');
     }
-  } catch {}
+  } catch { /* not running under Electron */ }
   return path.join(__dirname, '../../resources/opencode-plugin/wmux.js');
 }
 
