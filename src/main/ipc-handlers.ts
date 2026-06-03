@@ -176,6 +176,13 @@ export function registerIpcHandlers(windowManager: WindowManager, cdpProxyInstan
     return agentManager.getStatus(agentId as AgentId);
   });
 
+  // Clipboard text write: used by the OSC 52 handler in the renderer.
+  // navigator.clipboard.writeText() requires a user-gesture context; PTY data
+  // callbacks don't qualify, so we route through Electron's clipboard module.
+  ipcMain.handle('clipboard:write-text', (_event, text: string) => {
+    clipboard.writeText(text);
+  });
+
   // Clipboard image paste: save clipboard image to temp file, return path
   ipcMain.handle('clipboard:paste-image', async () => {
     const img = clipboard.readImage();

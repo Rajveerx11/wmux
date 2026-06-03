@@ -301,6 +301,20 @@ export function useTerminal({ surfaceId, shell, cwd, visible = true, focused = t
       return true;
     });
 
+    // OSC 52: clipboard write — emitted by tmux when text is copied (set-clipboard on).
+    // navigator.clipboard.writeText() requires a user-gesture context which PTY data
+    // callbacks don't have, so we go through Electron's clipboard module via IPC.
+    terminal.parser.registerOscHandler(52, (data) => {
+      const semi = data.indexOf(';');
+      const b64 = semi >= 0 ? data.slice(semi + 1) : data;
+      if (!b64 || b64 === '?') return true; // ignore read requests
+      try {
+        const text = atob(b64);
+        if (text) window.wmux?.clipboard?.writeText?.(text);
+      } catch {}
+      return true;
+    });
+
     // Use Canvas2D renderer instead of WebGL. WebGL has a hard per-process
     // limit (~16 contexts in Chromium); with N workspaces x M panes that ceiling
     // gets hit fast and Chromium force-loses the oldest contexts, which in

@@ -81,6 +81,7 @@ contextBridge.exposeInMainWorld('wmux', {
   },
   clipboard: {
     pasteImage: () => ipcRenderer.invoke('clipboard:paste-image'),
+    writeText: (text: string) => ipcRenderer.invoke('clipboard:write-text', text),
   },
   update: {
     getLatest: () => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_GET_LATEST),
