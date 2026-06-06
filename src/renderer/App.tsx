@@ -703,7 +703,7 @@ export default function App() {
                 const startWidth = browserWidth;
                 const onMove = (ev: MouseEvent) => {
                   const delta = startX - ev.clientX;
-                  setBrowserWidth(Math.max(250, Math.min(800, startWidth + delta)));
+                  setBrowserWidth(Math.max(250, Math.min(window.innerWidth - 400, startWidth + delta)));
                 };
                 const onUp = () => {
                   setIsResizingBrowser(false);
