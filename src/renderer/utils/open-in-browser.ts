@@ -3,6 +3,11 @@ import { splitNode, getAllPaneIds } from '../store/split-utils';
 import { PaneId, SplitNode, SurfaceRef, WorkspaceId } from '../../shared/types';
 import { v4 as uuid } from 'uuid';
 
+function findLeaf(tree: SplitNode, paneId: PaneId): (SplitNode & { type: 'leaf' }) | null {
+  if (tree.type === 'leaf') return tree.paneId === paneId ? tree : null;
+  return findLeaf(tree.children[0], paneId) ?? findLeaf(tree.children[1], paneId);
+}
+
 /** Recursively collect all surfaces from a split tree. */
 function getAllSurfaces(node: SplitNode): SurfaceRef[] {
   if (node.type === 'leaf') return node.surfaces;
@@ -36,11 +41,11 @@ export function openInWmuxBrowser(url: string, opts?: { forceExternal?: boolean 
 
   // Check if a browser surface already exists in this workspace
   const allSurfaces = getAllSurfaces(ws.splitTree);
-  const hasBrowser = allSurfaces.some(s => s.type === 'browser');
+  const browserSurface = allSurfaces.find(s => s.type === 'browser');
 
-  if (hasBrowser) {
+  if (browserSurface) {
     // Browser exists — just navigate
-    window.dispatchEvent(new CustomEvent('wmux:browser-navigate', { detail: { url } }));
+    window.dispatchEvent(new CustomEvent('wmux:browser-navigate', { detail: { url, surfaceId: browserSurface.id } }));
     return;
   }
 
@@ -56,9 +61,12 @@ export function openInWmuxBrowser(url: string, opts?: { forceExternal?: boolean 
   const newTree = splitNode(ws.splitTree, targetPaneId, newPaneId, 'browser', 'horizontal');
   state.updateSplitTree(wsId, newTree);
 
+  // Resolve the surfaceId of the newly created browser pane from the updated tree
+  const newSurfaceId = findLeaf(newTree, newPaneId)?.surfaces[0]?.id;
+
   // Wait for React to mount the BrowserPane + webview dom-ready, then navigate
   // 600ms covers: React render (~16ms) + webview init (~200-500ms)
   setTimeout(() => {
-    window.dispatchEvent(new CustomEvent('wmux:browser-navigate', { detail: { url } }));
+    window.dispatchEvent(new CustomEvent('wmux:browser-navigate', { detail: { url, surfaceId: newSurfaceId } }));
   }, 600);
 }

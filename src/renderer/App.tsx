@@ -289,7 +289,7 @@ export default function App() {
               const prevPorts = ws?.ports || [];
               // Only auto-navigate if this is a NEW port (not already known)
               if (!prevPorts.includes(port)) {
-                window.wmux?.browser?.navigate?.('', `http://localhost:${port}`);
+                window.wmux?.browser?.navigate?.(`browser-${currentWs}`, `http://localhost:${port}`);
               }
             }
           }

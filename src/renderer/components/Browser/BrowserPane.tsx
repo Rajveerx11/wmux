@@ -8,7 +8,7 @@ interface BrowserPaneProps {
   onUrlChange?: (url: string) => void;
 }
 
-export default function BrowserPane({ initialUrl = 'https://github.com/amirlehmam/wmux', surfaceId: _surfaceId, onUrlChange }: BrowserPaneProps) {
+export default function BrowserPane({ initialUrl = 'https://github.com/amirlehmam/wmux', surfaceId, onUrlChange }: BrowserPaneProps) {
   const [url, setUrl] = useState(initialUrl);
   const [currentUrl, setCurrentUrl] = useState(initialUrl);
   const [isLoading, setIsLoading] = useState(false);
@@ -87,12 +87,13 @@ export default function BrowserPane({ initialUrl = 'https://github.com/amirlehma
   // Listen for programmatic navigation (e.g. auto-navigate on dev server detection)
   useEffect(() => {
     const handler = (e: Event) => {
-      const url = (e as CustomEvent).detail?.url;
-      if (url) navigate(url);
+      const detail = (e as CustomEvent).detail;
+      const targetId = detail?.surfaceId;
+      if (detail?.url && (!targetId || targetId === surfaceId)) navigate(detail.url);
     };
     window.addEventListener('wmux:browser-navigate', handler);
     return () => window.removeEventListener('wmux:browser-navigate', handler);
-  }, [navigate]);
+  }, [navigate, surfaceId]);
 
   return (
     <div className="browser-pane">
