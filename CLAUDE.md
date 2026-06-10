@@ -169,6 +169,7 @@ mkdir -p .asar-staging build-out
 cp -r dist .asar-staging/dist          # explicit dest path — trailing-slash form is flaky on Git Bash
 cp package.json .asar-staging/package.json
 ( cd .asar-staging && npm install --omit=dev --ignore-scripts )   # subshell — cwd doesn't leak
+rm -rf .asar-staging/node_modules/node-pty/build   # force prebuilds load path: conpty.dll (useConptyDll) resolves relative to the LOADED conpty.node, and only prebuilds/win32-x64/ has the conpty/ dir next to it
 
 # 4. Pack ASAR (with native module unpacking)
 # Use --unpack-dir (path-based), NOT --unpack "**/*.node" — the glob form
