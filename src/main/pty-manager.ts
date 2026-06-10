@@ -155,14 +155,26 @@ export class PtyManager {
       env.WMUX_INTEGRATION = '1';
     }
 
-    const ptyProcess = pty.spawn(shell, args, {
+    const spawnOptions: pty.IWindowsPtyForkOptions = {
       name: 'xterm-256color',
       cols: options.cols ?? 80,
       rows: options.rows ?? 24,
       cwd: options.cwd,
       env,
       useConpty: true,
-    });
+      // The OS-inbox ConPTY garbles fast TUI repaints (stray inverse cells at
+      // the app's cursor position — issues #23/#30). Use node-pty's bundled
+      // modern conpty.dll instead; it resolves relative to the loaded
+      // conpty.node, so prebuilds/win32-x64/conpty/ must ship in the package.
+      useConptyDll: true,
+    };
+    let ptyProcess: pty.IPty;
+    try {
+      ptyProcess = pty.spawn(shell, args, spawnOptions);
+    } catch (err) {
+      console.warn('[wmux] spawn with bundled conpty.dll failed, retrying with inbox ConPTY:', err);
+      ptyProcess = pty.spawn(shell, args, { ...spawnOptions, useConptyDll: false });
+    }
 
     const entry: PtyEntry = {
       pty: ptyProcess,
