@@ -1,5 +1,3 @@
-[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/amirlehmam-wmux-badge.png)](https://mseep.ai/app/amirlehmam-wmux)
-
 <h1 align="center">wmux</h1>
 <p align="center">A visibility layer for Claude Code on Windows — see what your AI agent does in real-time</p>
 
@@ -414,6 +412,9 @@ wmux is a Windows reimplementation of [cmux](https://github.com/manaflow-ai/cmux
 
 - [GitHub Issues](https://github.com/amirlehmam/wmux/issues) — bug reports and feature requests
 - [GitHub Discussions](https://github.com/amirlehmam/wmux/discussions) — questions and ideas
+
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/amirlehmam-wmux-badge.png)](https://mseep.ai/app/amirlehmam-wmux)
+
 
 ## License
 
