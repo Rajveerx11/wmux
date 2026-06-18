@@ -299,7 +299,11 @@ export default function SurfaceTabBar({
             onClick={() => {
               if (caretRef.current) {
                 const r = caretRef.current.getBoundingClientRect();
-                setMenuPos({ top: r.bottom + 2, left: r.left });
+                const menuWidth = 160;
+                const left = r.right + menuWidth > window.innerWidth
+                  ? r.right - menuWidth
+                  : r.left;
+                setMenuPos({ top: r.bottom + 2, left });
               }
               setNewMenuOpen((v) => !v);
             }}
