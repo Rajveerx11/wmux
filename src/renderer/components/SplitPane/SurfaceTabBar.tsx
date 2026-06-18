@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { SurfaceRef, SurfaceId, PaneId, WorkspaceId, QuickLaunchProfile, ShellInfo } from '../../../shared/types';
 import { useStore } from '../../store';
 
@@ -87,8 +88,10 @@ export default function SurfaceTabBar({
   const [renamingId, setRenamingId] = useState<SurfaceId | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [newMenuOpen, setNewMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const renameInputRef = useRef<HTMLInputElement>(null);
   const newMenuRef = useRef<HTMLDivElement>(null);
+  const caretRef = useRef<HTMLButtonElement>(null);
   const agentMeta = useStore((state) => state.agentMeta);
   const activeWorkspaceId = useStore((state) => state.activeWorkspaceId);
   const renameSurface = useStore((state) => state.renameSurface);
@@ -289,10 +292,17 @@ export default function SurfaceTabBar({
         +
       </button>
       {onNewTyped && (
-        <div className="surface-tab-bar__new-menu-wrap" ref={newMenuRef}>
+        <div className="surface-tab-bar__new-menu-wrap">
           <button
+            ref={caretRef}
             className="surface-tab-bar__new-caret"
-            onClick={() => setNewMenuOpen((v) => !v)}
+            onClick={() => {
+              if (caretRef.current) {
+                const r = caretRef.current.getBoundingClientRect();
+                setMenuPos({ top: r.bottom + 2, left: r.left });
+              }
+              setNewMenuOpen((v) => !v);
+            }}
             tabIndex={-1}
             aria-haspopup="menu"
             aria-expanded={newMenuOpen}
@@ -300,8 +310,13 @@ export default function SurfaceTabBar({
           >
             ▾
           </button>
-          {newMenuOpen && (
-            <div className="surface-tab-bar__new-menu" role="menu">
+          {newMenuOpen && createPortal(
+            <div
+              ref={newMenuRef}
+              className="surface-tab-bar__new-menu"
+              role="menu"
+              style={{ position: 'fixed', top: menuPos.top, left: menuPos.left, zIndex: 9999 }}
+            >
               {shells && shells.length > 0 ? (
                 <>
                   {shells.map((shell) => (
@@ -345,7 +360,7 @@ export default function SurfaceTabBar({
                 </>
               )}
             </div>
-          )}
+          , document.body)}
         </div>
       )}
       {onSplitRight && (
