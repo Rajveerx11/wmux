@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { PaneId, SplitNode, SurfaceId, WorkspaceId, QuickLaunchProfile, ShellInfo } from '../../../shared/types';
-import { removeLeaf, splitNode } from '../../store/split-utils';
+import { findLeaf, removeLeaf, splitNode } from '../../store/split-utils';
 import TerminalPane from '../Terminal/TerminalPane';
 import BrowserPane from '../Browser/BrowserPane';
 import MarkdownPane from '../Markdown/MarkdownPane';
@@ -11,6 +11,11 @@ import { useStore } from '../../store';
 import type { SurfaceDragPayload, SurfaceDragPreviewTarget } from './drag-preview-types';
 import '../../styles/splitpane.css';
 import '../../styles/terminal.css';
+
+interface SurfaceDragData {
+  sourcePaneId: PaneId;
+  surfaceId: SurfaceId;
+}
 
 interface PaneWrapperProps {
   paneId: PaneId;
@@ -179,6 +184,12 @@ export default function PaneWrapper({
       setDragActive(false);
     }
   }, [isWorkspaceActive]);
+
+  useEffect(() => {
+    if (!surfaceDrag) {
+      setDragActive(false);
+    }
+  }, [surfaceDrag]);
 
   const renderAllSurfaces = () =>
     surfaces.map((surface, index) => {
@@ -368,6 +379,29 @@ export default function PaneWrapper({
     }
   };
 
+  const getValidSurfaceDragData = (data: string): SurfaceDragData | null => {
+    try {
+      const parsed = JSON.parse(data) as Partial<Record<'sourcePaneId' | 'surfaceId', unknown>>;
+      if (typeof parsed.sourcePaneId !== 'string' || typeof parsed.surfaceId !== 'string') {
+        return null;
+      }
+
+      const sourcePaneId = parsed.sourcePaneId as PaneId;
+      const surfaceId = parsed.surfaceId as SurfaceId;
+      const ws = activeWorkspaceId
+        ? useStore.getState().workspaces.find(w => w.id === activeWorkspaceId)
+        : undefined;
+      const sourceLeaf = ws ? findLeaf(ws.splitTree, sourcePaneId) : undefined;
+      if (!sourceLeaf?.surfaces.some((surface) => surface.id === surfaceId)) {
+        return null;
+      }
+
+      return { sourcePaneId, surfaceId };
+    } catch {
+      return null;
+    }
+  };
+
   const handleEdgeDrop = (e: React.DragEvent, direction: 'left' | 'right' | 'up' | 'down') => {
     e.preventDefault();
     setDragActive(false);
@@ -378,9 +412,20 @@ export default function PaneWrapper({
       return;
     }
     try {
-      const { sourcePaneId, surfaceId } = JSON.parse(data);
+      const dragData = getValidSurfaceDragData(data);
+      if (!dragData) {
+        onSurfaceDragEnd();
+        return;
+      }
+      const { sourcePaneId, surfaceId } = dragData;
+
+      if (sourcePaneId === paneId && surfaces.length === 1) {
+        onSurfaceDragEnd();
+        return;
+      }
+
       onSurfaceDragCommit();
-      splitAndMoveSurface(activeWorkspaceId, paneId, sourcePaneId as PaneId, surfaceId as SurfaceId, direction);
+      splitAndMoveSurface(activeWorkspaceId, paneId, sourcePaneId, surfaceId, direction);
     } catch {
       onSurfaceDragEnd();
     }
@@ -396,10 +441,15 @@ export default function PaneWrapper({
       return;
     }
     try {
-      const { sourcePaneId, surfaceId } = JSON.parse(data);
+      const dragData = getValidSurfaceDragData(data);
+      if (!dragData) {
+        onSurfaceDragEnd();
+        return;
+      }
+      const { sourcePaneId, surfaceId } = dragData;
       if (sourcePaneId !== paneId) {
         onSurfaceDragCommit();
-        moveSurface(activeWorkspaceId, sourcePaneId as PaneId, surfaceId as SurfaceId, paneId);
+        moveSurface(activeWorkspaceId, sourcePaneId, surfaceId, paneId);
         return;
       }
       onSurfaceDragEnd();

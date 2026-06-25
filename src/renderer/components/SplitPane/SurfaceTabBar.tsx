@@ -107,6 +107,13 @@ export default function SurfaceTabBar({
   const renameSurface = useStore((state) => state.renameSurface);
   const getAgentMeta = (surfaceId: string) => agentMeta.get(surfaceId as any);
 
+  useEffect(() => {
+    if (!isDragActive) {
+      setDraggingSurfaceId(null);
+      setInsertIndex(null);
+    }
+  }, [isDragActive]);
+
   // Start rename for the active surface
   const startRename = useCallback(() => {
     const activeSurface = surfaces[activeSurfaceIndex];

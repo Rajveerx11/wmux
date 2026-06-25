@@ -750,6 +750,17 @@ export default function App() {
     document.body.classList.remove('wmux-dragging');
   }, []);
 
+  useEffect(() => {
+    if (!surfaceDrag) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') handleSurfaceDragEnd();
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [surfaceDrag, handleSurfaceDragEnd]);
+
   // Clear zoom when the zoomed pane no longer exists
   useEffect(() => {
     if (!zoomedPaneId || !activeWorkspace) return;
