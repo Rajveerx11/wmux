@@ -261,6 +261,13 @@ export interface WorkspacePrefs {
   defaultShell: string;
   /** Show the welcome/tutorial screen on first launch (issue #22). */
   showWelcomeScreen: boolean;
+  /**
+   * Auto-open a diff tab in the bottom pane when an in-pane agent (Claude Code)
+   * edits/writes files (issue #63). Some users find the tab popping up — and
+   * stealing tab focus — disruptive and want it off entirely (issue #66), so this
+   * is an opt-out. Defaults on to preserve the shipped behaviour.
+   */
+  autoOpenDiffTab: boolean;
 }
 
 export const DEFAULT_WORKSPACE_PREFS: WorkspacePrefs = {
@@ -268,6 +275,7 @@ export const DEFAULT_WORKSPACE_PREFS: WorkspacePrefs = {
   autoReorderOnNotification: false,
   defaultShell: '',
   showWelcomeScreen: true,
+  autoOpenDiffTab: true,
 };
 
 // ─── Terminal settings ────────────────────────────────────────────────────────

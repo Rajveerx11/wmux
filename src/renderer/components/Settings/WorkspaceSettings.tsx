@@ -44,6 +44,20 @@ export default function WorkspaceSettings() {
         />
       </div>
 
+      <div className="settings-row">
+        <label className="settings-label">Auto-open diff tab on agent edits</label>
+        <input
+          type="checkbox"
+          className="settings-toggle"
+          checked={workspacePrefs.autoOpenDiffTab}
+          onChange={(e) => setWorkspacePrefs({ autoOpenDiffTab: e.target.checked })}
+        />
+      </div>
+      <p className="settings-hint">
+        When Claude edits or writes files, wmux pops a diff tab in the bottom pane. Turn this off to
+        stop it appearing.
+      </p>
+
       <div className="settings-divider" />
       <h3 className="settings-section-title">Shell</h3>
 

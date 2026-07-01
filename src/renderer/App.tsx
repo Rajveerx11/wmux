@@ -473,8 +473,10 @@ export default function App() {
         };
       });
 
-      // Auto-open diff tab in the BOTTOM pane when Claude edits/writes files
-      if (event.tool === 'Edit' || event.tool === 'Write') {
+      // Auto-open diff tab in the BOTTOM pane when Claude edits/writes files.
+      // Opt-out via Settings → Workspace (issue #66): users who find the tab
+      // popping up and stealing focus disruptive can turn it off entirely.
+      if ((event.tool === 'Edit' || event.tool === 'Write') && state.workspacePrefs.autoOpenDiffTab) {
         const ws = ownerWs;
         if (ws) {
           const bottomPaneId = findBottomPane(ws.splitTree);

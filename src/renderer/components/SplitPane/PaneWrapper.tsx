@@ -344,9 +344,9 @@ export default function PaneWrapper({
 
   const handleCloseSurface = (surfaceId: SurfaceId) => {
     if (activeWorkspaceId) {
-      // Kill PTY BEFORE removing from store — so re-mount after tree collapse
-      // doesn't find a dead PTY. Only explicit close kills the PTY.
-      window.wmux?.pty?.kill(surfaceId);
+      // PTY teardown now lives in the store's closeSurface action (issue #65), so
+      // every close route — this tab-× button, Ctrl+W, and `wmux close-surface` —
+      // reaps the shell through the same chokepoint.
       closeSurface(activeWorkspaceId, paneId, surfaceId);
     }
   };

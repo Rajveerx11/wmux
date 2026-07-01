@@ -1,7 +1,7 @@
 import * as pty from 'node-pty';
 import * as path from 'path';
 import * as fs from 'fs';
-import { execFileSync } from 'child_process';
+import { execFileSync, spawn } from 'child_process';
 import { v4 as uuidv4 } from 'uuid';
 import { SurfaceId } from '../shared/types';
 import { getPipePath, readPipeToken } from '../shared/instance';
@@ -389,15 +389,43 @@ export class PtyManager {
 
   kill(id: SurfaceId): void {
     const entry = this.ptys.get(id);
-    if (entry) {
-      entry.alive = false; // signals any in-flight chunked write to stop
+    if (!entry) return;
+
+    entry.alive = false; // signals any in-flight chunked write to stop
+    const pid = entry.pty.pid;
+
+    // Tree-kill the shell's whole process subtree BEFORE closing the pseudoconsole
+    // (issue #65). With `useConptyDll: true`, node-pty's DLL kill path only calls
+    // ClosePseudoConsole — it terminates the directly-attached wrapper shell but
+    // NOT grandchildren that don't share the console lifetime, notably Claude
+    // Code's persistent `-s` backend (`powershell … -s …`), which then orphans.
+    // `taskkill /T /F` walks the parent→child snapshot and force-kills the entire
+    // tree while it's still intact. Spawned detached + unref'd so it's non-blocking
+    // and survives even when this runs from killAll() on app quit.
+    if (process.platform === 'win32' && typeof pid === 'number' && pid > 0) {
       try {
-        entry.pty.kill();
+        // Resolve taskkill by absolute path from %SystemRoot%\System32 rather than
+        // relying on PATH — PATH could contain a writeable dir shadowing taskkill.
+        const systemRoot = process.env.SystemRoot || process.env.windir || 'C:\\Windows';
+        const taskkillPath = path.join(systemRoot, 'System32', 'taskkill.exe');
+        const killer = spawn(taskkillPath, ['/PID', String(pid), '/T', '/F'], {
+          windowsHide: true,
+          detached: true,
+          stdio: 'ignore',
+        });
+        killer.on('error', () => { /* taskkill missing / already gone */ });
+        killer.unref();
       } catch {
-        // Process may already be dead
+        // spawn failed (e.g. taskkill unavailable) — fall back to pty.kill below
       }
-      this.ptys.delete(id);
     }
+
+    try {
+      entry.pty.kill();
+    } catch {
+      // Process may already be dead
+    }
+    this.ptys.delete(id);
   }
 
   killAll(): void {

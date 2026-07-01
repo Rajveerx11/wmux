@@ -4,6 +4,7 @@
  */
 import { useStore } from './store';
 import { splitNode, removeLeaf, getAllPaneIds, findLeaf, buildGridLayout } from './store/split-utils';
+import { killSurfacePty } from './store/pty-teardown';
 import { PaneId, SurfaceId, WorkspaceId, SurfaceType } from '../shared/types';
 import { v4 as uuid } from 'uuid';
 
@@ -114,6 +115,14 @@ export function initPipeBridge(): void {
     if (!wsId) return;
     const ws = store.workspaces.find(w => w.id === wsId);
     if (!ws) return;
+
+    // Reap the pane's shells before removing it (issue #65). `wmux close-pane`
+    // dropped the leaf without killing any PTY (mirrors PaneWrapper.handleClosePane,
+    // the UI path that always did kill its terminals).
+    const leaf = findLeaf(ws.splitTree, paneId as PaneId);
+    if (leaf) {
+      for (const surface of leaf.surfaces) killSurfacePty(surface);
+    }
 
     const newTree = removeLeaf(ws.splitTree, paneId as PaneId);
     if (newTree) {

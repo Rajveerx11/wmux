@@ -2,6 +2,7 @@ import { StateCreator } from 'zustand';
 import { v4 as uuid } from 'uuid';
 import { WorkspaceId, PaneId, SurfaceId, SurfaceRef, SurfaceType } from '../../shared/types';
 import { findLeaf, removeLeaf, splitNode, getAllPaneIds } from './split-utils';
+import { killSurfacePty } from './pty-teardown';
 import { WorkspaceSlice } from './workspace-slice';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -154,9 +155,15 @@ export const createSurfaceSlice: StateCreator<SliceState, [], [], SurfaceSlice> 
     const leaf = findLeaf(ws.splitTree, paneId);
     if (!leaf) return;
 
-    // Remember the closed surface so Ctrl+Shift+T can bring it back (issue #64).
+    // Remember the closed surface so Ctrl+Shift+T can bring it back (issue #64),
+    // then reap its shell. Killing here — at the state transition — is what fixes
+    // the leak (issue #65): Ctrl+W and `wmux close-surface` both funnel through
+    // this action, and neither used to kill the PTY (only the tab-× button did).
     const closing = leaf.surfaces.find((s) => s.id === surfaceId);
-    if (closing) pushClosedSurface(closing);
+    if (closing) {
+      pushClosedSurface(closing);
+      killSurfacePty(closing);
+    }
 
     const newSurfaces = leaf.surfaces.filter((s) => s.id !== surfaceId);
 

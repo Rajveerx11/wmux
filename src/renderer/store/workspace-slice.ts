@@ -2,6 +2,7 @@ import { StateCreator } from 'zustand';
 import { v4 as uuid } from 'uuid';
 import { WorkspaceId, WorkspaceInfo, SplitNode } from '../../shared/types';
 import { createLeaf } from './split-utils';
+import { killTreeTerminalPtys } from './pty-teardown';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,13 @@ export const createWorkspaceSlice: StateCreator<WorkspaceSlice> = (set, get) => 
   },
 
   closeWorkspace(id: WorkspaceId): void {
+    // Reap every shell in the workspace before dropping its subtree (issue #65).
+    // Closing a workspace (Ctrl+Shift+W, sidebar ×, `wmux close-workspace`) used
+    // to discard the entire split tree WITHOUT killing any of its PTYs, orphaning
+    // every pane's wrapper shell for the life of the app.
+    const closing = get().workspaces.find((w) => w.id === id);
+    if (closing) killTreeTerminalPtys(closing.splitTree);
+
     set((state) => {
       const idx = state.workspaces.findIndex((w) => w.id === id);
       if (idx === -1) return state;
