@@ -134,6 +134,22 @@ Download [wmux-0.7.10-win-x64.zip](https://github.com/amirlehmam/wmux/releases/l
 
 > **Note:** After extracting, right-click the zip before extracting and select **Unblock** if Windows SmartScreen warns about the executable.
 
+### Updates & security
+
+wmux checks GitHub Releases for updates. Downloaded updates are held in a
+quarantine window (3 days by default) before installing, and installs always
+require an explicit confirmation click — nothing is applied silently.
+
+Release artifacts are **not yet Authenticode-signed** (SignPath OSS approval is
+pending; the CI signing pipeline is wired and activates automatically once the
+signing secrets are configured). Until signing lands, security-sensitive or
+air-gapped environments can control the updater with environment variables:
+
+| Variable | Effect |
+|----------|--------|
+| `WMUX_DISABLE_UPDATER=1` | Disable the auto-updater entirely (update manually from GitHub Releases) |
+| `WMUX_MIN_RELEASE_AGE_DAYS=N` | Change the quarantine window (default 3 days) |
+
 ### From source
 
 ```bash

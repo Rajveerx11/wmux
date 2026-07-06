@@ -25,6 +25,7 @@
   ],
   "win": {
     "icon": "resources/icons/icon.ico",
+    "publisherName": ["SignPath Foundation"],
     "target": [
       { "target": "dir", "arch": ["x64"] }
     ]

@@ -16,6 +16,13 @@ jobs:
   build-sign-release:
     runs-on: windows-latest
 
+    # SignPath Authenticode signing (issue #71). The signing steps run only when
+    # both secrets are configured, so releases keep working while SignPath OSS
+    # approval is pending — and turn on automatically once the secrets land.
+    env:
+      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+      SIGNPATH_ORGANIZATION_ID: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -55,70 +62,9 @@ jobs:
             echo "tag=v$VER" >> "$GITHUB_OUTPUT"
           fi
 
-      # ── Sign exe with SignPath (disabled — waiting for OSS approval) ──
-      # Uncomment the 3 steps below once SignPath OSS quota is available:
-      #
-      # - name: Submit exe to SignPath for Authenticode signing
-      #   id: sign-submit
-      #   shell: bash
-      #   run: |
-      #     HTTP_RESPONSE=$(curl -s -w "\nHTTP_CODE:%{http_code}" \
-      #       -X POST \
-      #       -H "Authorization: Bearer ${{ secrets.SIGNPATH_API_TOKEN }}" \
-      #       -F "projectSlug=wmux" \
-      #       -F "signingPolicySlug=wmux" \
-      #       -F "artifactConfigurationSlug=initial" \
-      #       -F "description=CI release v${{ steps.version.outputs.version }}" \
-      #       -F "artifact=@release/win-unpacked/wmux.exe" \
-      #       -D headers.txt \
-      #       "https://app.signpath.io/api/v1/${{ secrets.SIGNPATH_ORGANIZATION_ID }}/SigningRequests/SubmitWithArtifact")
-      #     HTTP_CODE=$(echo "$HTTP_RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
-      #     echo "HTTP status: $HTTP_CODE"
-      #     if [ "$HTTP_CODE" != "201" ]; then
-      #       echo "::error::SignPath submission failed (HTTP $HTTP_CODE)"
-      #       echo "$HTTP_RESPONSE"
-      #       exit 1
-      #     fi
-      #     LOCATION=$(grep -i "^location:" headers.txt | tr -d '\r')
-      #     SIGNING_REQUEST_ID=$(echo "$LOCATION" | grep -oE '[0-9a-f-]{36}$')
-      #     echo "Signing request ID: $SIGNING_REQUEST_ID"
-      #     echo "signing_request_id=$SIGNING_REQUEST_ID" >> "$GITHUB_OUTPUT"
-      #
-      # - name: Wait for signing to complete
-      #   id: sign-wait
-      #   shell: bash
-      #   run: |
-      #     ORG="${{ secrets.SIGNPATH_ORGANIZATION_ID }}"
-      #     TOKEN="${{ secrets.SIGNPATH_API_TOKEN }}"
-      #     REQ_ID="${{ steps.sign-submit.outputs.signing_request_id }}"
-      #     API="https://app.signpath.io/api/v1/$ORG/SigningRequests/$REQ_ID"
-      #     for i in $(seq 1 60); do
-      #       RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" "$API")
-      #       STATUS=$(echo "$RESPONSE" | jq -r '.status')
-      #       echo "[$i/60] Status: $STATUS"
-      #       if [ "$STATUS" = "Completed" ]; then
-      #         echo "Signing completed successfully!"
-      #         exit 0
-      #       elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Denied" ] || [ "$STATUS" = "Canceled" ]; then
-      #         echo "::error::Signing request $STATUS"
-      #         echo "$RESPONSE" | jq .
-      #         exit 1
-      #       fi
-      #       sleep 10
-      #     done
-      #     echo "::error::Signing timed out after 10 minutes"
-      #     exit 1
-      #
-      # - name: Download signed exe
-      #   shell: bash
-      #   run: |
-      #     curl -s \
-      #       -H "Authorization: Bearer ${{ secrets.SIGNPATH_API_TOKEN }}" \
-      #       -o "release/win-unpacked/wmux.exe" \
-      #       "https://app.signpath.io/api/v1/${{ secrets.SIGNPATH_ORGANIZATION_ID }}/SigningRequests/${{ steps.sign-submit.outputs.signing_request_id }}/SignedArtifact"
-      #     echo "Signed exe downloaded, size: $(wc -c < release/win-unpacked/wmux.exe) bytes"
-
       # ── Embed icon + metadata into exe (rcedit) ───────────
+      # NOTE: rcedit rewrites the PE and would invalidate an Authenticode
+      # signature, so it must run BEFORE the SignPath steps below.
       - name: Embed icon and version metadata
         shell: bash
         run: |
@@ -141,6 +87,73 @@ jobs:
           "
         env:
           VER: ${{ steps.version.outputs.version }}
+
+      # ── Sign exe with SignPath (runs only when secrets are set, #71) ──
+      - name: Submit exe to SignPath for Authenticode signing
+        id: sign-submit
+        if: env.SIGNPATH_API_TOKEN != '' && env.SIGNPATH_ORGANIZATION_ID != ''
+        shell: bash
+        run: |
+          HTTP_RESPONSE=$(curl -s -w "\nHTTP_CODE:%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer $SIGNPATH_API_TOKEN" \
+            -F "projectSlug=wmux" \
+            -F "signingPolicySlug=wmux" \
+            -F "artifactConfigurationSlug=initial" \
+            -F "description=CI release v${{ steps.version.outputs.version }}" \
+            -F "artifact=@release/win-unpacked/wmux.exe" \
+            -D headers.txt \
+            "https://app.signpath.io/api/v1/$SIGNPATH_ORGANIZATION_ID/SigningRequests/SubmitWithArtifact")
+          HTTP_CODE=$(echo "$HTTP_RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
+          echo "HTTP status: $HTTP_CODE"
+          if [ "$HTTP_CODE" != "201" ]; then
+            echo "::error::SignPath submission failed (HTTP $HTTP_CODE)"
+            echo "$HTTP_RESPONSE"
+            exit 1
+          fi
+          LOCATION=$(grep -i "^location:" headers.txt | tr -d '\r')
+          SIGNING_REQUEST_ID=$(echo "$LOCATION" | grep -oE '[0-9a-f-]{36}$')
+          echo "Signing request ID: $SIGNING_REQUEST_ID"
+          echo "signing_request_id=$SIGNING_REQUEST_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for signing to complete
+        if: steps.sign-submit.outcome == 'success' && steps.sign-submit.outputs.signing_request_id != ''
+        shell: bash
+        run: |
+          REQ_ID="${{ steps.sign-submit.outputs.signing_request_id }}"
+          API="https://app.signpath.io/api/v1/$SIGNPATH_ORGANIZATION_ID/SigningRequests/$REQ_ID"
+          for i in $(seq 1 60); do
+            RESPONSE=$(curl -s -H "Authorization: Bearer $SIGNPATH_API_TOKEN" "$API")
+            STATUS=$(echo "$RESPONSE" | jq -r '.status')
+            echo "[$i/60] Status: $STATUS"
+            if [ "$STATUS" = "Completed" ]; then
+              echo "Signing completed successfully!"
+              exit 0
+            elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Denied" ] || [ "$STATUS" = "Canceled" ]; then
+              echo "::error::Signing request $STATUS"
+              echo "$RESPONSE" | jq .
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "::error::Signing timed out after 10 minutes"
+          exit 1
+
+      - name: Download signed exe and verify signature
+        if: steps.sign-submit.outcome == 'success' && steps.sign-submit.outputs.signing_request_id != ''
+        shell: bash
+        run: |
+          curl -s \
+            -H "Authorization: Bearer $SIGNPATH_API_TOKEN" \
+            -o "release/win-unpacked/wmux.exe" \
+            "https://app.signpath.io/api/v1/$SIGNPATH_ORGANIZATION_ID/SigningRequests/${{ steps.sign-submit.outputs.signing_request_id }}/SignedArtifact"
+          echo "Signed exe downloaded, size: $(wc -c < release/win-unpacked/wmux.exe) bytes"
+          # Fail the release if the artifact we are about to ship is not validly signed.
+          powershell -NoProfile -Command "
+            \$sig = Get-AuthenticodeSignature 'release/win-unpacked/wmux.exe';
+            Write-Host ('Status: ' + \$sig.Status + ' — Subject: ' + \$sig.SignerCertificate.Subject);
+            if (\$sig.Status -ne 'Valid') { exit 1 }
+          "
 
       # ── Create release zip ─────────────────────────────────
       - name: Create release zip

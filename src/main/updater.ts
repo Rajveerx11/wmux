@@ -15,8 +15,12 @@ import { fetchLatestRelease } from './update-checker';
 //   2. No silent install — autoDownload/autoInstallOnAppQuit are off; the user
 //      must explicitly confirm the install via a dialog.
 //
-// (Signature verification + Authenticode + build provenance are tracked as
-// follow-ups in the issue; they need offline keys / CI changes, not just code.)
+// Authenticode signing is wired in CI (issue #71): release.yml signs wmux.exe
+// via SignPath once the SIGNPATH_* secrets are configured, and electron-builder
+// pins publisherName ("SignPath Foundation") so signed exe/NSIS update flows
+// verify the publisher. The current zip-based update artifact cannot itself be
+// Authenticode-verified by electron-updater, so the quarantine window below
+// remains the primary client-side control until the artifact format changes.
 
 const DEFAULT_MIN_RELEASE_AGE_DAYS = 3;
 const RECHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
