@@ -52,6 +52,23 @@ function resolveShell(shell: string | undefined): string {
   return getDefaultShell();
 }
 
+// A shell spec may be a bare executable ("pwsh.exe", an absolute path that can
+// contain spaces) or a command line with arguments ("ssh user@host",
+// '"C:\Tools\my shell.exe" --flag') — issue #78 remote terminals ride on the
+// latter. An existing absolute path is always treated as a bare executable so
+// legacy specs like "C:\Program Files\PowerShell\7\pwsh.exe" never get split.
+export function parseShellSpec(spec: string | undefined): { command: string; args: string[] } {
+  const trimmed = (spec || '').trim();
+  if (!trimmed) return { command: '', args: [] };
+  if (path.isAbsolute(trimmed) && fs.existsSync(trimmed)) {
+    return { command: trimmed, args: [] };
+  }
+  if (!/\s/.test(trimmed)) return { command: trimmed, args: [] };
+  const tokens = (trimmed.match(/"[^"]*"|\S+/g) ?? []).map((t) => t.replace(/^"|"$/g, ''));
+  const [command = '', ...args] = tokens;
+  return { command, args };
+}
+
 function getShellIntegrationPath(): string {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -238,7 +255,12 @@ export class PtyManager {
       }
     }
 
-    const shell = resolveShell(options.shell);
+    // Split "ssh user@host"-style specs into executable + args (issue #78).
+    // Extra args only apply when the REQUESTED executable resolved — if we fell
+    // back to the default shell, its command line must not inherit ssh's args.
+    const spec = parseShellSpec(options.shell);
+    const shell = resolveShell(spec.command);
+    const shellExtraArgs = shell === spec.command ? spec.args : [];
     const shellType = getShellType(shell);
     const integrationDir = getShellIntegrationPath();
     const cliPath = getCliPath();
@@ -267,7 +289,7 @@ export class PtyManager {
     const pathKey = Object.keys(env).find((k) => k.toLowerCase() === 'path') ?? 'PATH';
     env[pathKey] = env[pathKey] ? `${cliBinDir}${path.delimiter}${env[pathKey]}` : cliBinDir;
 
-    const args = buildShellArgs(shellType, env, integrationDir, options.cwd);
+    const args = [...buildShellArgs(shellType, env, integrationDir, options.cwd), ...shellExtraArgs];
 
     // Quick-launch startup commands (issue #32). Run them as part of the shell's
     // own initialization — BEFORE the first interactive prompt — instead of

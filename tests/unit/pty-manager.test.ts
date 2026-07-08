@@ -1,5 +1,8 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { PtyManager } from '../../src/main/pty-manager';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { PtyManager, parseShellSpec } from '../../src/main/pty-manager';
 
 const TEST_SHELL = 'cmd.exe';
 const TEST_ENV = Object.fromEntries(
@@ -140,5 +143,42 @@ describe('PtyManager', () => {
     manager.killAll();
     expect(manager.has(id1)).toBe(false);
     expect(manager.has(id2)).toBe(false);
+  });
+});
+
+describe('parseShellSpec (issue #78 — shell command lines with args)', () => {
+  it('treats a bare executable as command with no args', () => {
+    expect(parseShellSpec('pwsh.exe')).toEqual({ command: 'pwsh.exe', args: [] });
+  });
+
+  it('returns empty command for undefined/empty specs', () => {
+    expect(parseShellSpec(undefined)).toEqual({ command: '', args: [] });
+    expect(parseShellSpec('   ')).toEqual({ command: '', args: [] });
+  });
+
+  it('splits an ssh command line into command + args', () => {
+    expect(parseShellSpec('ssh user@host')).toEqual({ command: 'ssh', args: ['user@host'] });
+    expect(parseShellSpec('ssh -p 2222 user@host')).toEqual({
+      command: 'ssh',
+      args: ['-p', '2222', 'user@host'],
+    });
+  });
+
+  it('never splits an existing absolute path containing spaces', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wmux spec '));
+    const exe = path.join(dir, 'my shell.exe');
+    fs.writeFileSync(exe, '');
+    try {
+      expect(parseShellSpec(exe)).toEqual({ command: exe, args: [] });
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('honors double quotes around an executable path with spaces', () => {
+    expect(parseShellSpec('"C:\\some path\\tool.exe" --flag')).toEqual({
+      command: 'C:\\some path\\tool.exe',
+      args: ['--flag'],
+    });
   });
 });

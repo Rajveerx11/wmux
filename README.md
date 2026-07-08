@@ -298,6 +298,9 @@ wmux ping                          # Check if wmux is running
 wmux notify "Build complete"       # Send a notification
 wmux new-workspace --title "API"   # Create a workspace
 wmux list-workspaces               # List all workspaces
+wmux ssh user@host                 # Remote terminal (OpenSSH) in a new workspace
+wmux ssh -p 2222 user@host --title "prod"  # Extra args are passed through to ssh
+wmux new-window                    # Second wmux window (e.g. for another monitor)
 wmux split --right                 # Split focused pane
 wmux send "npm test"               # Send text to terminal
 wmux send-key Enter --ctrl         # Send keystroke

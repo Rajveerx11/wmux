@@ -235,6 +235,29 @@ async function cmdNewWorkspace(args: string[]): Promise<void> {
   print(await sendV2('workspace.create', params));
 }
 
+// Remote terminal (issue #78): open a workspace whose shell is the OpenSSH
+// client connecting to <target>. Everything that isn't a wmux flag is passed
+// through to ssh, so `wmux ssh -p 2222 user@host` works as expected.
+async function cmdSsh(args: string[]): Promise<void> {
+  const title = getFlag(args, '--title');
+  const sshArgs: string[] = [];
+  for (let i = 1; i < args.length; i++) {
+    if (args[i] === '--title') { i++; continue; }
+    sshArgs.push(args[i]);
+  }
+  if (sshArgs.length === 0) {
+    console.error('Usage: wmux ssh [ssh options] <user@host> [--title T]');
+    process.exit(1);
+  }
+  // Title heuristic: the last non-flag token is the destination (`-p 2222
+  // user@host` → "user@host"), matching how ssh itself orders its argv.
+  const target = [...sshArgs].reverse().find((a) => !a.startsWith('-')) ?? sshArgs[sshArgs.length - 1];
+  print(await sendV2('workspace.create', {
+    title: title || `ssh ${target}`,
+    shell: `ssh ${sshArgs.join(' ')}`,
+  }));
+}
+
 async function cmdSetColorScheme(args: string[]): Promise<void> {
   // Two forms:
   //   wmux set-color-scheme <scheme>             → apply to current surface
@@ -311,9 +334,11 @@ const COMMANDS: Record<string, (args: string[]) => Promise<void> | void> = {
   capabilities: async () => print(await sendV2('system.capabilities')),
   'list-windows': async () => print(await sendV2('window.list')),
   'focus-window': async (args) => print(await sendV2('window.focus', { id: args[1] })),
+  'new-window': async () => print(await sendV2('window.create')),
 
   // Workspace
   'new-workspace': cmdNewWorkspace,
+  ssh: cmdSsh,
   'close-workspace': async (args) => print(await sendV2('workspace.close', { id: args[1] })),
   'select-workspace': async (args) => print(await sendV2('workspace.select', { id: args[1] })),
   'rename-workspace': async (args) => print(await sendV2('workspace.rename', { id: args[1], title: args[2] })),
@@ -437,8 +462,9 @@ function printUsage() {
 
 Usage: wmux <command> [options]
 
-System:     ping, identify, capabilities, list-windows, focus-window <id>
+System:     ping, identify, capabilities, list-windows, focus-window <id>, new-window
 Workspace:  new-workspace, close-workspace, select-workspace, rename-workspace, list-workspaces
+Remote:     ssh [ssh options] <user@host> [--title T]   (remote terminal in a new workspace)
 Surface:    new-surface [--type T] [--color-scheme NAME], close-surface, focus-surface, list-surfaces
             set-color-scheme [surfaceId] <scheme>, clear-color-scheme [surfaceId], list-themes
 Pane:       split [--down] [--type T] [--color-scheme NAME], close-pane, focus-pane, zoom-pane, list-panes, tree

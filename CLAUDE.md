@@ -347,10 +347,12 @@ resources/wmux-orchestrator/
 ```bash
 # System
 wmux ping | identify | capabilities
+wmux new-window | list-windows | focus-window <id>
 
 # Workspaces
-wmux new-workspace [--title T] [--shell S] [--cwd D]
+wmux new-workspace [--title T] [--shell S] [--cwd D]   # --shell accepts args: --shell "ssh user@host"
 wmux close-workspace | select-workspace | rename-workspace | list-workspaces
+wmux ssh [ssh options] <user@host> [--title T]         # remote terminal in a new workspace (issue #78)
 
 # Surfaces (tabs within a pane)
 wmux new-surface [--type terminal|browser|markdown]
