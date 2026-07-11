@@ -2,10 +2,25 @@ import { useEffect, useState } from 'react';
 import { useStore } from '../../store';
 import { UserColorScheme } from '../../store/settings-slice';
 
+/** First family of a CSS font stack, unquoted — used to match the picker. */
+function firstFamily(stack: string): string {
+  const first = (stack || '').split(',')[0].trim();
+  return first.replace(/^['"]/, '').replace(/['"]$/, '');
+}
+
+/** Quote a family name for CSS if it needs it (spaces etc.). */
+function cssFamily(name: string): string {
+  return /^[A-Za-z][A-Za-z0-9-]*$/.test(name) ? name : `'${name}'`;
+}
+
 export default function TerminalSettings() {
   const { terminalPrefs, setTerminalPrefs } = useStore();
   const [themes, setThemes] = useState<string[]>(['Monokai']);
   const [newSchemeName, setNewSchemeName] = useState('');
+  // Installed font families for the picker (issue #89) — enumerated by the
+  // main process from the Windows font registry, so users don't have to guess
+  // what to type into the free-text stack field.
+  const [systemFonts, setSystemFonts] = useState<string[]>([]);
 
   // Load the list of bundled themes from the main process on mount so the
   // dropdown reflects actual files in resources/themes/ rather than a stub.
@@ -13,7 +28,13 @@ export default function TerminalSettings() {
     (window as any).wmux?.config?.getThemeList?.().then((list: string[]) => {
       if (Array.isArray(list) && list.length > 0) setThemes(list);
     });
+    (window as any).wmux?.system?.getFonts?.().then((list: string[]) => {
+      if (Array.isArray(list)) setSystemFonts(list);
+    }).catch(() => { /* picker simply stays hidden */ });
   }, []);
+
+  const currentFamily = firstFamily(terminalPrefs.fontFamily);
+  const pickerValue = systemFonts.includes(currentFamily) ? currentFamily : '';
 
   const userSchemeNames = Object.keys(terminalPrefs.userColorSchemes || {});
   const allSchemes = Array.from(new Set([...themes, ...userSchemeNames])).sort((a, b) => a.localeCompare(b));
@@ -49,8 +70,27 @@ export default function TerminalSettings() {
     <div className="settings-section">
       <h3 className="settings-section-title">Font</h3>
 
+      {systemFonts.length > 0 && (
+        <div className="settings-row">
+          <label className="settings-label">Font</label>
+          <select
+            className="settings-select"
+            value={pickerValue}
+            onChange={(e) => {
+              const name = e.target.value;
+              if (name) setTerminalPrefs({ fontFamily: `${cssFamily(name)}, Consolas, monospace` });
+            }}
+          >
+            <option value="">{pickerValue ? 'Custom stack…' : `Pick an installed font (${systemFonts.length})…`}</option>
+            {systemFonts.map((f) => (
+              <option key={f} value={f}>{f}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div className="settings-row">
-        <label className="settings-label">Font family</label>
+        <label className="settings-label">Font stack (advanced)</label>
         <input
           type="text"
           className="settings-input"
@@ -58,6 +98,25 @@ export default function TerminalSettings() {
           onChange={(e) => setTerminalPrefs({ fontFamily: e.target.value })}
           placeholder="e.g. Consolas, Menlo, monospace"
         />
+      </div>
+
+      {/* Live preview in the selected font, so a pick is verifiable at a glance */}
+      <div className="settings-row">
+        <div
+          style={{
+            width: '100%',
+            padding: '6px 10px',
+            borderRadius: 4,
+            border: '1px solid rgba(128,128,128,0.25)',
+            fontFamily: terminalPrefs.fontFamily || 'monospace',
+            fontSize: terminalPrefs.fontSize || 13,
+            opacity: 0.9,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+          }}
+        >
+          {currentFamily || 'monospace'} — 0O 1lI {'{}'} =&gt; -&gt; :: 42
+        </div>
       </div>
 
       <div className="settings-row">

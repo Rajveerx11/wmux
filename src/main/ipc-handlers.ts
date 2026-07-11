@@ -7,6 +7,7 @@ import { observePtyData } from './claude-observer';
 import { PtyManager } from './pty-manager';
 import { NotificationManager } from './notification-manager';
 import { detectShells } from './shell-detector';
+import { listSystemFonts } from './font-detector';
 import { getDefaultTheme, getThemeByName, loadBundledThemes } from './theme-loader';
 import { parseWindowsTerminalConfig, parseGhosttyConfig, loadProjectProfiles, importWindowsTerminalProfiles } from './config-loader';
 import { loadUserConfig, getConfigPath } from './user-config';
@@ -91,6 +92,11 @@ export function registerIpcHandlers(windowManager: WindowManager, cdpProxyInstan
 
   ipcMain.handle(IPC_CHANNELS.SYSTEM_GET_SHELLS, async () => {
     return detectShells();
+  });
+
+  // Installed font families for the Settings font picker (issue #89).
+  ipcMain.handle(IPC_CHANNELS.SYSTEM_GET_FONTS, async () => {
+    return listSystemFonts();
   });
 
   ipcMain.on(IPC_CHANNELS.SYSTEM_OPEN_EXTERNAL, (_event, url: string) => {

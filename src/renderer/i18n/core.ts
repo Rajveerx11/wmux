@@ -45,6 +45,15 @@ const en: Dict = {
   'settings.general.uiTheme.light': 'Light',
   'settings.general.appearanceHint':
     'Controls the sidebar, tab bar, and window chrome. Terminal colors are set separately.',
+  // Settings — General panel — Custom background (issue #89)
+  'settings.general.customBgSection': 'Custom background',
+  'settings.general.customBgEnable': 'Enable custom background',
+  'settings.general.customBgCss': 'Background (CSS)',
+  'settings.general.customBgPreset': 'Preset',
+  'settings.general.customBgPreset.none': 'Choose a preset…',
+  'settings.general.customBgOpacity': 'Terminal opacity',
+  'settings.general.customBgHint':
+    'Any CSS background: a color, gradients, or url(…) images. Drawn behind the terminals, independent of the color scheme. Terminal opacity controls how much shows through.',
   // Command palette
   'palette.placeholder': 'Type a command or search...',
   'palette.empty': 'No results found',
@@ -108,6 +117,14 @@ const fr: Dict = {
   'settings.general.uiTheme.light': 'Clair',
   'settings.general.appearanceHint':
     "Contrôle la barre latérale, la barre d'onglets et le cadre de la fenêtre. Les couleurs du terminal se règlent séparément.",
+  'settings.general.customBgSection': 'Arrière-plan personnalisé',
+  'settings.general.customBgEnable': "Activer l'arrière-plan personnalisé",
+  'settings.general.customBgCss': 'Arrière-plan (CSS)',
+  'settings.general.customBgPreset': 'Préréglage',
+  'settings.general.customBgPreset.none': 'Choisir un préréglage…',
+  'settings.general.customBgOpacity': 'Opacité du terminal',
+  'settings.general.customBgHint':
+    "N'importe quel arrière-plan CSS : couleur, dégradés ou images url(…). Dessiné derrière les terminaux, indépendamment du jeu de couleurs. L'opacité du terminal contrôle sa visibilité.",
   'palette.placeholder': 'Tapez une commande ou recherchez...',
   'palette.empty': 'Aucun résultat',
   'palette.category.actions': 'Actions',
@@ -164,6 +181,14 @@ const zh: Dict = {
   'settings.general.uiTheme.dark': '深色',
   'settings.general.uiTheme.light': '浅色',
   'settings.general.appearanceHint': '控制侧边栏、标签栏和窗口外框。终端颜色需单独设置。',
+  'settings.general.customBgSection': '自定义背景',
+  'settings.general.customBgEnable': '启用自定义背景',
+  'settings.general.customBgCss': '背景（CSS）',
+  'settings.general.customBgPreset': '预设',
+  'settings.general.customBgPreset.none': '选择预设…',
+  'settings.general.customBgOpacity': '终端不透明度',
+  'settings.general.customBgHint':
+    '任意 CSS 背景：纯色、渐变或 url(…) 图片。绘制在终端后面，与配色方案无关。终端不透明度控制其可见程度。',
   'palette.placeholder': '输入命令或搜索...',
   'palette.empty': '未找到结果',
   'palette.category.actions': '操作',

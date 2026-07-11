@@ -285,6 +285,7 @@ export const IPC_CHANNELS = {
   CONFIG_USER_CONFIG_UPDATED: 'config:userConfigUpdated',
   // System
   SYSTEM_GET_SHELLS: 'system:getShells',
+  SYSTEM_GET_FONTS: 'system:getFonts',
   SYSTEM_OPEN_EXTERNAL: 'system:openExternal',
   SYSTEM_GET_VERSION: 'system:getVersion',
   SYSTEM_PICK_FOLDER: 'system:pickFolder',

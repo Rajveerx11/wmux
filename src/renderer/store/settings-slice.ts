@@ -367,6 +367,16 @@ export const DEFAULT_BROWSER_PREFS: BrowserPrefs = {
  */
 export interface AppearancePrefs {
   uiTheme: 'system' | 'dark' | 'light';
+  /**
+   * Custom background parallel to theming (issue #89, Wave-style `bg`).
+   * Any CSS `background` shorthand: gradients, colors, url(...) images.
+   * Rendered as a layer behind the terminal area; terminal color-scheme
+   * backgrounds get `terminalBgOpacity` alpha so it shows through.
+   */
+  customBackgroundEnabled: boolean;
+  customBackground: string;
+  /** 30–100 (%). How opaque the terminal theme background stays over the custom background. */
+  terminalBgOpacity: number;
 }
 
 export const DEFAULT_APPEARANCE_PREFS: AppearancePrefs = {
@@ -374,6 +384,9 @@ export const DEFAULT_APPEARANCE_PREFS: AppearancePrefs = {
   // 0.14.0, so existing users' chrome must not change color on first launch
   // after upgrading. New users can switch to 'system'/'light' in Settings.
   uiTheme: 'dark',
+  customBackgroundEnabled: false,
+  customBackground: '',
+  terminalBgOpacity: 88,
 };
 
 // ─── Slice interface ──────────────────────────────────────────────────────────

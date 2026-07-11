@@ -298,6 +298,10 @@ export default function App() {
   }, []);
   // Broadcast-input mode banner (issue #64): mirror the runtime store flag.
   const broadcastInputActive = useStore((s) => s.broadcastInputActive);
+  // Custom background parallel to theming (issue #89): rendered as a layer
+  // behind the split tree; terminals show it through their alpha'd theme bg.
+  const appearancePrefs = useStore((s) => s.appearancePrefs);
+  const customBgActive = appearancePrefs.customBackgroundEnabled && !!appearancePrefs.customBackground.trim();
   // Browser panel auto-opens on startup unless disabled in Settings (issue #22).
   const [browserOpen, setBrowserOpen] = useState(() => useStore.getState().browserPrefs.openOnStartup);
   const [browserWidth, setBrowserWidth] = useState(420);
@@ -915,6 +919,17 @@ export default function App() {
         {/* Middle: terminals — ALL workspaces stay mounted, only active is visible */}
         {/* This keeps PTYs alive when switching sessions (Claude Code etc. keep running) */}
         <div style={{ flex: 1, overflow: 'hidden', position: 'relative', minWidth: 0 }}>
+          {customBgActive && (
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: appearancePrefs.customBackground,
+                pointerEvents: 'none',
+              }}
+            />
+          )}
           {workspaces.map((ws) => (
             <div
               key={ws.id}

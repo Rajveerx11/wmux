@@ -114,13 +114,34 @@ function resolveSchemeName(override: string | undefined, prefsTheme: string | un
 }
 
 /**
+ * Apply an alpha channel to a CSS color for the custom-background feature
+ * (issue #89). Theme backgrounds are hex (#rgb/#rrggbb); anything else is
+ * returned unchanged rather than risk producing a string xterm can't parse.
+ */
+export function withBgAlpha(color: string, alpha: number): string {
+  if (alpha >= 1 || !color) return color;
+  const hex = color.trim();
+  let r: number, g: number, b: number;
+  if (/^#[0-9a-fA-F]{3}$/.test(hex)) {
+    r = parseInt(hex[1] + hex[1], 16); g = parseInt(hex[2] + hex[2], 16); b = parseInt(hex[3] + hex[3], 16);
+  } else if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+    r = parseInt(hex.slice(1, 3), 16); g = parseInt(hex.slice(3, 5), 16); b = parseInt(hex.slice(5, 7), 16);
+  } else {
+    return color;
+  }
+  return `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, alpha))})`;
+}
+
+/**
  * Build an xterm ITheme from a bundled ThemeConfig plus an optional user
  * override (which partially replaces fields). This is what makes per-pane
  * `--color-scheme prod` work for user-defined schemes that aren't full themes.
+ * `bgAlpha` < 1 makes the terminal background translucent so the custom
+ * background layer behind the split tree shows through (issue #89).
  */
-function buildXtermTheme(base: ThemeConfig, override?: UserColorScheme): ITheme {
+function buildXtermTheme(base: ThemeConfig, override?: UserColorScheme, bgAlpha = 1): ITheme {
   const fg = override?.foreground || base.foreground;
-  const bg = override?.background || base.background;
+  const bg = withBgAlpha(override?.background || base.background, bgAlpha);
   const cursor = override?.cursor || base.cursor || fg;
   const palette = [...base.palette];
   if (override?.palette) {
@@ -325,6 +346,12 @@ export function useTerminal({ surfaceId, shell, cwd, visible = true, focused = t
   const prefs = useStore((s) => s.terminalPrefs);
   const schemeName = resolveSchemeName(colorScheme, prefs.theme);
   const userScheme = prefs.userColorSchemes?.[schemeName];
+  // Custom background (issue #89): when enabled, the theme background gets
+  // alpha so the background layer rendered behind the split tree shows through.
+  const appearance = useStore((s) => s.appearancePrefs);
+  const bgAlpha = appearance.customBackgroundEnabled && appearance.customBackground
+    ? Math.max(0.3, Math.min(1, (appearance.terminalBgOpacity ?? 88) / 100))
+    : 1;
 
   const fit = () => {
     if (fitAddonRef.current) {
@@ -353,7 +380,11 @@ export function useTerminal({ surfaceId, shell, cwd, visible = true, focused = t
       fontSize: prefs.fontSize || 13,
       cursorBlink: prefs.cursorBlink ?? true,
       cursorStyle: prefs.cursorStyle || 'block',
-      allowTransparency: false,
+      // Always on: with an opaque background it renders identically, and the
+      // WebGL context's alpha mode is fixed at creation — so this must not
+      // depend on whether the custom background (issue #89) is currently
+      // enabled, or toggling it would require recreating every terminal.
+      allowTransparency: true,
       allowProposedApi: true,
       scrollback: prefs.scrollbackLines || 10000,
     });
@@ -909,7 +940,7 @@ export function useTerminal({ surfaceId, shell, cwd, visible = true, focused = t
     let cancelled = false;
     fetchTheme(schemeName).then((base) => {
       if (cancelled || !xtermRef.current) return;
-      xtermRef.current.options.theme = buildXtermTheme(base, userScheme);
+      xtermRef.current.options.theme = buildXtermTheme(base, userScheme, bgAlpha);
     });
     // Font + cursor + scrollback can be applied synchronously.
     term.options.fontFamily = prefs.fontFamily || term.options.fontFamily;
@@ -938,7 +969,7 @@ export function useTerminal({ surfaceId, shell, cwd, visible = true, focused = t
       cancelled = true;
       if (raf !== null) cancelAnimationFrame(raf);
     };
-  }, [schemeName, userScheme, prefs.fontFamily, prefs.fontSize, prefs.cursorStyle, prefs.cursorBlink, prefs.scrollbackLines, visible]);
+  }, [schemeName, userScheme, bgAlpha, prefs.fontFamily, prefs.fontSize, prefs.cursorStyle, prefs.cursorBlink, prefs.scrollbackLines, visible]);
 
   // Refit + force-repaint when terminal becomes visible again (tab/workspace switch).
   // A canvas inside a visibility:hidden ancestor skips paint frames; on return we
